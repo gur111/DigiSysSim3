@@ -172,8 +172,6 @@
      else
          aluout     <= alu_result;
 
-  // XOR_FFFFFFFF
-
 
  // Memory
  // ======

@@ -6,7 +6,8 @@
     LW      = 10'b0000011_010,
     SW      = 10'b0100011_010,
     ALU     = 10'b0110011_xxx,
-    ALUI    = 10'b0010011_000,
+    // Currently, it's always 000. When more itype opcodes will be implemented, we can replace with xxx
+    ALUI    = 10'b0010011_000, 
     BEQ     = 10'b1100011_000,
     JAL     = 10'b1101111_xxx;
 

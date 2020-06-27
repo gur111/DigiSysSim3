@@ -49,7 +49,8 @@
     RTYPE_WB    = 7,
     BEQ_EXEC    = 8,
     JAL_EXEC    = 9,
-    XOR_FFFF    = 10
+    ITYPE_ALU   = 10,
+    XOR_FFFF    = 11
 	} sm_type;
 
 sm_type current,next;
@@ -76,7 +77,7 @@ sm_type current,next;
                 LW:     next = LSW_ADDR;
                 SW:     next = LSW_ADDR;
                 ALU:    next = RTYPE_ALU;
-                ALUI:   next = RTYPE_ALU;
+                ALUI:   next = ITYPE_ALU;
                 BEQ:    next = BEQ_EXEC;
                 JAL:    next = JAL_EXEC;
                 // For unimplemented instructions do nothing
@@ -97,12 +98,11 @@ sm_type current,next;
             next = FETCH;
         SW_MEM:
             next = FETCH;
-        RTYPE_ALU: begin
-            if (opcode_funct3 == ALUI)
-                next = XOR_FFFF;
-            else
-                next = RTYPE_WB;
-        end
+        ITYPE_ALU:
+            // Currently it's always ADDI and we always need XOR with 0xffffffff after so yeah
+            next = XOR_FFFF;
+        RTYPE_ALU:
+            next = RTYPE_WB;
         RTYPE_WB:
             next = FETCH;
         BEQ_EXEC:
@@ -154,6 +154,12 @@ sm_type current,next;
             bsel        = ALUB_IMM;
             alusel      = ALU_ADD;
         end
+        ITYPE_ALU: begin
+            immsel      = IMM_L;
+            asel        = ALUA_REG;
+            bsel        = ALUB_IMM;
+            alusel      = ALU_ADD;
+        end
         LW_MEM:
             mdrwrite    = 1'b1;
         LW_WB: begin
@@ -164,14 +170,8 @@ sm_type current,next;
             memrw       = 1'b1;
         RTYPE_ALU: begin
             asel        = ALUA_REG;
-            if (opcode_funct3 == ALUI) begin
-                bsel        = ALUB_IMM;
-                immsel      = IMM_L;
-                alusel      = {instr[14:12],1'b0}; // Funct3 and INST[30]
-            end else begin
-                bsel        = ALUB_REG;
-                alusel      = {instr[14:12],instr[30]}; // Funct3 and INST[30]
-            end
+            bsel        = ALUB_REG;
+            alusel      = {instr[14:12],instr[30]}; // Funct3 and INST[30]
         end
         XOR_FFFF: begin
             asel        = ALUA_ALUOUT;
