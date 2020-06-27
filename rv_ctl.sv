@@ -20,8 +20,8 @@
      output logic [1:0] wbsel,
      output logic regwen,
      output logic [1:0] immsel,
-     output logic asel,
-     output logic bsel,
+     output logic [1:0] asel,
+     output logic [1:0] bsel,
      output logic [3:0] alusel,
      output logic mdrwrite,
      
@@ -48,7 +48,8 @@
     RTYPE_ALU   = 6,
     RTYPE_WB    = 7,
     BEQ_EXEC    = 8,
-    JAL_EXEC    = 9
+    JAL_EXEC    = 9,
+    XOR_FFFF    = 10
 	} sm_type;
 
 sm_type current,next;
@@ -75,6 +76,7 @@ sm_type current,next;
                 LW:     next = LSW_ADDR;
                 SW:     next = LSW_ADDR;
                 ALU:    next = RTYPE_ALU;
+                ALUI:   next = RTYPE_ALU;
                 BEQ:    next = BEQ_EXEC;
                 JAL:    next = JAL_EXEC;
                 // For unimplemented instructions do nothing
@@ -95,14 +97,20 @@ sm_type current,next;
             next = FETCH;
         SW_MEM:
             next = FETCH;
-        RTYPE_ALU:
-            next = RTYPE_WB;
+        RTYPE_ALU: begin
+            if (opcode_funct3 == ALUI)
+                next = XOR_FFFF;
+            else
+                next = RTYPE_WB;
+        end
         RTYPE_WB:
             next = FETCH;
         BEQ_EXEC:
             next = FETCH;
         JAL_EXEC:
             next = FETCH;
+        XOR_FFFF:
+            next = RTYPE_WB;
         default: // Should never reach this
             next = FETCH;
     endcase
@@ -156,8 +164,19 @@ sm_type current,next;
             memrw       = 1'b1;
         RTYPE_ALU: begin
             asel        = ALUA_REG;
-            bsel        = ALUB_REG;
-            alusel      = {instr[14:12],instr[30]}; // Funct3 and INST[30]
+            if (opcode_funct3 == ALUI) begin
+                bsel        = ALUB_IMM;
+                immsel      = IMM_L;
+                alusel      = {instr[14:12],1'b0}; // Funct3 and INST[30]
+            end else begin
+                bsel        = ALUB_REG;
+                alusel      = {instr[14:12],instr[30]}; // Funct3 and INST[30]
+            end
+        end
+        XOR_FFFF: begin
+            asel        = ALUA_ALUOUT;
+            bsel        = ALUB_FFFF;
+            alusel      = ALU_XOR;
         end
         RTYPE_WB: begin
             wbsel       = WB_ALUOUT;
